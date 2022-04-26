@@ -1,0 +1,55 @@
+#!/bin/sh
+
+gen_env()
+{
+	__gen_env=
+	for __gen_env_var; do
+		__gen_env="${__gen_env}$(printf '{"name":"%s", "value":"%s"},' "${__gen_env_var}" "$(eval "echo \"\${${__gen_env_var}}\"")")"
+	done
+	unset __gen_env_var
+	echo "${__gen_env%%,}"
+	unset __gen_env
+}
+
+##
+# Cleanup our defaults
+RUNNER_NAME="${INPUT_NAME}"
+RUNNER_ID="${RUNNER_NAME}-$(openssl rand -hex 4)"
+RUNNER_LABELS="${INPUT_LABELS%%,},${RUNNER_ID}"
+RUNNER_CONTEXT="${INPUT_CONTEXT:-${GITHUB_REPOSITORY}}"
+RUNNER_WORKDIR="${INPUT_WORKDIR}"
+TASK_DEFINITION="${INPUT_TASK_DEFINITION:=${RUNNER_NAME}}"
+CLUSTER="${INPUT_CLUSTER:-default}"
+LAUNCH_TYPE="${INPUT_LAUNCH_TYPE}"
+TAGS="key=Name,value=${INPUT_NAME}"
+NETWORK_CONFIG="awsvpcConfiguration={subnets=${INPUT_SUBNETS},securityGroups=${INPUT_SECURITY_GROUPS},assignPublicIp=DISABLED}"
+OVERRIDES="$(printf '{"containerOverrides": [{"name":"%s","environment": [%s]}]}' "${RUNNER_NAME}" "$(gen_env RUNNER_CONTEXT RUNNER_NAME RUNNER_LABELS RUNNER_WORKDIR GITHUB_TOKEN)")"
+
+: RUNNER_NAME="${RUNNER_NAME}"
+: RUNNER_LABELS="${RUNNER_LABELS}"
+: RUNNER_CONTEXT="${RUNNER_CONTEXT}"
+: RUNNER_WORKDIR="${RUNNER_WORKDIR}"
+: TASK_DEFINITION="${TASK_DEFINITION}"
+: CLUSTER="${CLUSTER}"
+: TAGS="${TAGS}"
+: LAUNCH_TYPE="${LAUNCH_TYPE}"
+: NETWORK_CONFIG="${NETWORK_CONFIG}"
+: CLUSTER="${CLUSTER}"
+: OVERRIDES="${OVERRIDES}"
+
+echo "::set-output name=runner_id::${RUNNER_ID}"
+echo "Runner ID: ${RUNNER_ID}"
+task_data="$(aws --output=json ecs run-task --task-definition="${TASK_DEFINITION}" --launch-type="${LAUNCH_TYPE}" --cluster="${CLUSTER}" --network-configuration="${NETWORK_CONFIG}" --tags="${TAGS}" --overrides="${OVERRIDES}")"
+task_arn="$(printf '%s' "${task_data}"|jq -r '.tasks[0].taskArn')"
+task_id="${task_arn##*/}"
+echo "::set-output name=aws_task_arn::${task_arn}"
+echo "AWS Task ARN: ${task_arn}"
+echo "::set-output name=aws_task_id::${task_id}"
+task_exit_code='0'
+aws --cli-read-timeout 180 ecs wait tasks-running --cluster "${CLUSTER}" --tasks "${task_arn}"
+task_data="$(aws --cli-read-timeout 180 ecs describe-tasks --cluster "${CLUSTER}" --tasks "${task_arn}")"
+task_exit_code="$(printf '%s' "${task_data}"|jq -r '.tasks[0].containers[0].exitCode')"
+test "${task_exit_code}" = 'null' || exit "${task_exit_code}"
+task_ipaddr="$(printf '%s' "${task_data}" | jq -r '.tasks[0].containers[0].networkInterfaces[0].privateIpv4Address')"
+echo "::set-output name=ipaddr::${task_ipaddr}"
+echo "IP Address: ${task_ipaddr}"

@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+die() { echo "error: $*"; exit 1; }
+
+test "$#" -gt '0' || die 'no tag name specified'
+test "$#" -gt '1' || die 'no tag value specified'
+
+test -n "$1" || die 'empty tag name'
+test -n "$2" || die 'empty tag value'
+
+exec aws --output=json ec2 describe-subnets --filter "Name=tag:${1},Values=${2}" | jq '.Subnets[].SubnetId' | jq -sc

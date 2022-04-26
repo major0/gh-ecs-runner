@@ -1,0 +1,137 @@
+name: "GitHub ECS Runner"
+author: "Mark Ferrell"
+description: "Launch ephemeral GitHub Runners in AWS ECS."
+
+branding:
+  color: blue
+  icon: cpu
+
+inputs:
+  name:
+    description: "Runner name"
+    type: string
+    default: "github-ecs-runner"
+    required: true
+  token:
+    description: "Access token to pass to the GitHub Runner.  Defaults to github.token"
+    type: string
+    required: false
+  labels:
+    description: "GitHub Runner labels in addition to the default: self-hosted,Linux,X64,ephemeral,<inputs.name>"
+    type: string
+    required: false
+  workdir:
+    description: Runner workdir
+    type: string
+    required: true
+    default: "_workdir"
+  context:
+    description: "Runner context.  Defaults to {owner}/{repo}"
+    type: string
+    required: false
+  task-definition:
+    description: "Existing AWS ECS Task Definition to use.  Defaults to <inputs.name>"
+    type: string
+    required: false
+  cluster:
+    description: "ECS Cluster to deploy to"
+    type: string
+    required: true
+    default: default
+  launch-type:
+    description: "Launch type on which to run the task. Possible Values: FARGATE (default), EC2."
+    type: string
+    default: FARGATE
+    required: true
+  subnets:
+    description: "Subnet to deploy to. Subnets must have access to an IGW. Required for `launch-type = 'FARGATE'`"
+    type: string
+    required: false
+  subnets-tag:
+    description: "Use subnets with tagged with `key:value`"
+    type: string
+    required: false
+  security-groups:
+    description: "Network Security Groups to assign to this task. Required for `launch-type = 'FARGATE'`"
+    type: string
+    required: false
+  security-groups-tag:
+    description: "Use security groups tagged with `key:value`"
+    type: string
+    required: false
+  debug:
+    desription: "Enable action debugging"
+    type: boolean
+    required: true
+    default: false
+outputs:
+  id:
+    description: GitHub Runner ID
+    value: ${{ steps.runner.outputs.runner_id }}
+  runner_id:
+    description: GitHub Runner ID
+    value: ${{ steps.runner.outputs.runner_id }}
+  arn:
+    description: AWS ECS Task Arn
+    value: ${{ steps.runner.outputs.aws_task_arn }}
+  aws_task_arn:
+    description: AWS ECS Task Arn
+    value: ${{ steps.runner.outputs.aws_task_arn }}
+  aws_task_id:
+    description: AWS ECS Task ID
+    value: ${{ steps.runner.outputs.aws_task_id }}
+  ipaddr:
+    description: AWS ECS IP Address
+    value: ${{ steps.runner.outputs.ipaddr }}
+
+runs:
+  using: composite
+  steps:
+    - id: debug
+      if: ${{ inputs.debug }}
+      shell: bash
+      run: |
+        : Debugging data
+        printf '##\n# Environ\n%s\n' "$(env|grep '^GITHUB_'|sort)"
+        printf '##\n# Event\n%s\n' "$(cat "${GITHUB_EVENT_PATH}")"
+        printf '##\n# Files\n' ; find "${GITHUB_ACTION_PATH}"/*
+        printf '##\n# AWS\n' ; aws sts get-caller-identity
+
+    - id: subnets
+      shell: bash
+      env:
+        subnet_ids: "[ ${{ inputs.subnets }} ]"
+        subnet_tag: "${{ inputs.subnets-tag }}"
+      run: |
+        : AWS Describe Subnets
+        : FIXME migrate to ecs-run-task
+        test -z "${subnet_tag}" || subnet_ids="$(sh -x "${GITHUB_ACTION_PATH}/scripts/get-subnets" "${subnet_tag%%:*}" "${subnet_tag#*:}")"
+        echo "::set-output name=ids::${subnet_ids}"
+
+    - id: security-groups
+      shell: bash
+      env:
+        security_group_names: "[ ${{ inputs.security-groups }} ]"
+        security_group_tag: "${{ inputs.security-groups-tag }}"
+      run: |
+        : AWS Describe Security Groups
+        : FIXME migrate to ecs-run-task
+        test -z "${security_group_tag}" || security_group_names="$(sh -x "${GITHUB_ACTION_PATH}/scripts/get-security-groups" "${security_group_tag%%:*}" "${security_group_tag#*:}")"
+        echo "::set-output name=names::${security_group_names}"
+
+    - id: runner
+      shell: bash
+      env:
+        GITHUB_TOKEN: "${{ inputs.token }}"
+        INPUT_NAME: "${{ inputs.name }}"
+        INPUT_LABELS: "self-hosted,Linux,X64,ephemeral,${{ inputs.name }},${{ inputs.labels }}"
+        INPUT_WORKDIR: "${{ inputs.workdir }}"
+        INPUT_CONTEXT: "${{ inputs.context }}"
+        INPUT_LAUNCH_TYPE: "${{ inputs.launch-type }}"
+        INPUT_CLUSTER: "${{ inputs.cluster }}"
+        INPUT_TASK_DEFINITION: "${{ inputs.task-definition }}"
+        INPUT_SUBNETS: "${{ steps.subnets.outputs.ids }}"
+        INPUT_SECURITY_GROUPS: "${{ steps.security-groups.outputs.names }}"
+      run: |
+        : AWS Run ECS Task
+        GITHUB_TOKEN="${GITHUB_TOKEN:=${{ github.token }}}" "${GITHUB_ACTION_PATH}/scripts/ecs-run-task"
