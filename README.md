@@ -47,6 +47,72 @@ _note: While it is technically possible to allow the workflow to define a
 job/task to launch on its own, this would allow a workflow to launch arbitrary
 applications into the target w/ little-to-no constraints._
 
+
+Example
+-------
+
+A simple example on launching the runner:
+
+```
+jobs:
+  runner:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      repository-projects: write
+    outputs:
+      id: ${{ steps.runner.outputs.runner_id }}
+      arn: ${{ steps.runner.outputs.task_arn }}
+      ipaddr: ${{ steps.runner.outputs.ipaddr }}
+    steps:
+
+    # Can leverage GitHub OIDC to AWS
+    # See: https://github.com/aws-actions/configure-aws-credentials
+    - id: credentials
+      name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+	role-session-name: MyDeploymentWorkflow
+        aws-region: us-west-2
+
+    - id: runner
+      uses: major0/gh-ecs-runner@master
+      with:
+        name: techops-runner
+        subnets-tag: placement:ecs
+        token: ${{ secrets.runner-token }}
+        labels: dev
+
+  do-stuff:
+    needs: runner
+    runs-on: ["self-hosted", "Linux", "X64", "ephemeral", "dev", "${{ needs.runner.outputs.id }}"]
+    permissions:
+      id-token: write
+      repository-projects: read
+    steps:
+
+    # See: https://github.com/actions/checkout
+    - uses: actions/checkout@v3
+      with:
+        ssh-key: ${{ secrets.ssh-key }}
+
+    # (optional) switch to different AWS credentials
+    - id: credentials
+      name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - id: my-stuff
+      run: |
+        # This runs in AWS on the GitHub Runner
+	echo "Hello World"
+```
+
+See: [action.yaml](action.yaml) for input paramters.
+
 [//]: # (Begin Common Mark document references)
 
 [AWS]: https://aws.amazon.com/
