@@ -1,5 +1,6 @@
 FROM ubuntu:20.04@sha256:8ae9bafbb64f63a50caab98fd3a5e37b3eb837a3e0780b78e5218e63193961f9
 
+ARG VERSION=latest
 
 RUN set -e \
 	&& apt-get update \
@@ -25,12 +26,12 @@ RUN set -e \
 
 WORKDIR /home/runner
 
-RUN GITHUB_RUNNER_VERSION="${GITHUB_RUNNER_VERSION:-$(curl -s 'https://api.github.com/repos/actions/runner/releases/latest' | jq -r .tag_name | tr -d 'v')}" \
-	&& curl -sSLO "https://github.com/actions/runner/releases/download/v${GITHUB_RUNNER_VERSION}/actions-runner-linux-x64-${GITHUB_RUNNER_VERSION}.tar.gz" \
-	&& tar -zxvf "actions-runner-linux-x64-${GITHUB_RUNNER_VERSION}.tar.gz" \
-	&& rm -f "actions-runner-linux-x64-${GITHUB_RUNNER_VERSION}.tar.gz" \
-	&& './bin/installdependencies.sh' \
-	&& chown -R runner:runner '/home/runner'
+COPY install-gh-runner.sh .
+RUN set -e \
+        && sh install-gh-runner.sh "${VERSION}" \
+        && rm install-gh-runner.sh \
+        && rm -rf /var/lib/apt/lists/*
+
 
 COPY entrypoint.sh entrypoint.sh
 USER runner

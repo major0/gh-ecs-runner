@@ -79,10 +79,11 @@ esac
 
 ! test -z "${GITHUB_TOKEN}" || die "not set 'GITHUB_TOKEN'"
 
-set -x
 RUNNER_ID="$(gh_runner_id "${RUNNER_NAME}")"
 REGISTRATION_URL="$(gh_url "${RUNNER_CONTEXT:-${GITHUB_REPOSITORY}}")"
 TEMP_TOKEN="$(gh_token "${REGISTRATION_URL}")"
+
+test -n "${TEMP_TOKEN}" || die 'failed to acquire temporary token'
 
 ./config.sh \
 	--name "${RUNNER_ID}" \
