@@ -81,9 +81,19 @@ esac
 
 RUNNER_ID="$(gh_runner_id "${RUNNER_NAME}")"
 REGISTRATION_URL="$(gh_url "${RUNNER_CONTEXT:-${GITHUB_REPOSITORY}}")"
-TEMP_TOKEN="$(gh_token "${REGISTRATION_URL}")"
 
-test -n "${TEMP_TOKEN}" || die 'failed to acquire temporary token'
+TEMP_TOKEN="$(gh_token "${REGISTRATION_URL}")"
+retry=1
+while test -z "${TEMP_TOKEN}"; do
+	test "${retry}" -lt '10' || retry=1
+	nth="$(echo "2^${retry} - 1" | bc)"
+	timer="$(awk -v nth="${nth}" 'BEGIN{ srand(); printf("%d\n", int(1.0 + rand()*nth)); }' < /dev/null)"
+	printf 'failed to acquire token, sleeping for %d\n' "${timer}"
+	sleep "${timer}" || break # allow sigint to terminate the loop
+	TEMP_TOKEN="$(gh_token "${REGISTRATION_URL}")"
+	retry=$((retry+1))
+done
+unset retry nth timer
 
 ./config.sh \
 	--name "${RUNNER_ID}" \
