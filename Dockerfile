@@ -7,6 +7,7 @@ RUN set -e \
 	&& DEBIAN_FRONTEND='noninteractive' \
 	   apt-get install -y \
 		awscli \
+		bc \
 		build-essential \
 		curl \
 		git \
