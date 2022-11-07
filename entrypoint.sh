@@ -103,7 +103,8 @@ unset retry nth timer
 	--token "${TEMP_TOKEN}" \
         --unattended \
         --replace \
-        --ephemeral
+        --ephemeral \
+				--disableupdate
 
 cleanup() { ./config.sh remove --unattended --token "${TEMP_TOKEN}"; }
 trap 'cleanup; exit 130' 'INT'
