@@ -24,23 +24,18 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ github.token }}
 
-    - id: build-metadata
+    - id: runner-metadata
       run: |
-        : 'Generating Docker tags'
-        tags=
+        : 'Finding latest GitHub Runner version'
         version="$(curl -s 'https://api.github.com/repos/actions/runner/releases/latest' | jq -r .tag_name | tr -d 'v')"
-        for repo in ghcr.io/major0/gh-ecs-runner; do
-          tags="$(printf '%s%s%%0A' "${tags}" "${repo}:${version}")"
-          tags="$(printf '%s%s%%0A' "${tags}" "${repo}:latest")"
-        done
-        printf '::set-output name=version::%s\n' "${version}"
-        printf '::set-output name=tags::%s\n' "${tags}"
+        printf 'version=%s\n' "${version}" >> "${GITHUB_OUTPUT}"
 
     - id: docker-metadata
       uses: docker/metadata-action@v3
       with:
-        images: library/ubuntu:20.04@sha256:8ae9bafbb64f63a50caab98fd3a5e37b3eb837a3e0780b78e5218e63193961f9
-        tags: ${{ steps.build-tags.outputs.tags }}
+        images: ghcr.io/major0/gh-ecs-runner
+        tags: |
+          type=semver,pattern={{version}},value=${{ steps.runner-metadata.outputs.version }}
         labels: |
           org.opencontainers.image.title=Containerized GitHub Runner
           org.opencontainers.image.vendor=GitHub
@@ -54,11 +49,11 @@ jobs:
           org.opencontainers.image.base.digest=sha256:8ae9bafbb64f63a50caab98fd3a5e37b3eb837a3e0780b78e5218e63193961f9
 
     - id: build-push
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v3
       with:
         push: true
-        tags: ${{ steps.build-metadata.outputs.tags }}
+        tags: ${{ steps.docker-metadata.outputs.tags }}
         labels: ${{ steps.docker-metadata.outputs.labels }}
-        build-args: VERSION=${{ steps.build-metadata.outputs.version}}
+        build-args: VERSION=${{ steps.runner-metadata.outputs.version }}
         cache-from: type=registry,ref=ghcr.io/major0/gh-ecs-runner:latest
         cache-to: type=inline
