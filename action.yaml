@@ -106,7 +106,7 @@ runs:
         : AWS Describe Subnets
         : FIXME migrate to ecs-run-task
         test -z "${subnet_tag}" || subnet_ids="$(sh -x "${GITHUB_ACTION_PATH}/scripts/get-subnets" "${subnet_tag%%:*}" "${subnet_tag#*:}")"
-        echo "::set-output name=ids::${subnet_ids}"
+        echo "ids=${subnet_ids}" >> ${GITHUB_OUTPUT}
 
     - id: security-groups
       shell: bash
@@ -117,7 +117,7 @@ runs:
         : AWS Describe Security Groups
         : FIXME migrate to ecs-run-task
         test -z "${security_group_tag}" || security_group_names="$(sh -x "${GITHUB_ACTION_PATH}/scripts/get-security-groups" "${security_group_tag%%:*}" "${security_group_tag#*:}")"
-        echo "::set-output name=names::${security_group_names}"
+        echo "names=${security_group_names}" >> ${GITHUB_OUTPUT}
 
     - id: runner
       shell: bash
