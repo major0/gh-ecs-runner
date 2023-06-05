@@ -37,19 +37,19 @@ OVERRIDES="$(printf '{"containerOverrides": [{"name":"%s","environment": [%s]}]}
 : CLUSTER="${CLUSTER}"
 : OVERRIDES="${OVERRIDES}"
 
-echo "::set-output name=runner_id::${RUNNER_ID}"
+echo "runner_id=${RUNNER_ID}" >> ${GITHUB_OUTPUT}
 echo "Runner ID: ${RUNNER_ID}"
 task_data="$(aws --output=json ecs run-task --task-definition="${TASK_DEFINITION}" --launch-type="${LAUNCH_TYPE}" --cluster="${CLUSTER}" --network-configuration="${NETWORK_CONFIG}" --tags="${TAGS}" --overrides="${OVERRIDES}")"
 task_arn="$(printf '%s' "${task_data}"|jq -r '.tasks[0].taskArn')"
 task_id="${task_arn##*/}"
-echo "::set-output name=aws_task_arn::${task_arn}"
+echo "aws_task_arn=${task_arn}" >> ${GITHUB_OUTPUT}
 echo "AWS Task ARN: ${task_arn}"
-echo "::set-output name=aws_task_id::${task_id}"
+echo "aws_task_id=${task_id}" >> ${GITHUB_OUTPUT}
 task_exit_code='0'
 aws --cli-read-timeout 180 ecs wait tasks-running --cluster "${CLUSTER}" --tasks "${task_arn}"
 task_data="$(aws --cli-read-timeout 180 ecs describe-tasks --cluster "${CLUSTER}" --tasks "${task_arn}")"
 task_exit_code="$(printf '%s' "${task_data}"|jq -r '.tasks[0].containers[0].exitCode')"
 test "${task_exit_code}" = 'null' || exit "${task_exit_code}"
 task_ipaddr="$(printf '%s' "${task_data}" | jq -r '.tasks[0].containers[0].networkInterfaces[0].privateIpv4Address')"
-echo "::set-output name=ipaddr::${task_ipaddr}"
+echo "ipaddr=${task_ipaddr}" >> ${GITHUB_OUTPUT}
 echo "IP Address: ${task_ipaddr}"
