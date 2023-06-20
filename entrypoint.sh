@@ -83,15 +83,14 @@ RUNNER_ID="$(gh_runner_id "${RUNNER_NAME}")"
 REGISTRATION_URL="$(gh_url "${RUNNER_CONTEXT:-${GITHUB_REPOSITORY}}")"
 
 TEMP_TOKEN="$(gh_token "${REGISTRATION_URL}")"
-retry=1
+retry=0
 while test -z "${TEMP_TOKEN}"; do
-	test "${retry}" -lt '10' || retry=1
-	nth="$(echo "2^${retry} - 1" | bc)"
-	timer="$(awk -v nth="${nth}" 'BEGIN{ srand(); printf("%d\n", int(1.0 + rand()*nth)); }' < /dev/null)"
+	timer="$((1 << retry))"
+	test "${timer}" -le '300' || timer='300'
 	printf 'failed to acquire token, sleeping for %d\n' "${timer}"
 	sleep "${timer}" || break # allow sigint to terminate the loop
 	TEMP_TOKEN="$(gh_token "${REGISTRATION_URL}")"
-	retry=$((retry+1))
+	retry="$((retry+1))"
 done
 unset retry nth timer
 
