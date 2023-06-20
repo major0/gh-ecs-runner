@@ -12,7 +12,7 @@ debug()
 {
 	"${DEBUG}" || return
 	printf '%s:\n' "${1}"
-	printf '%s' "${2}" || paste /dev/null -
+	printf '%s' "${2}" | paste /dev/null -
 }
 
 ##
