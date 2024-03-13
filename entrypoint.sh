@@ -79,6 +79,8 @@ esac
 
 ! test -z "${GITHUB_TOKEN}" || die "not set 'GITHUB_TOKEN'"
 
+printf 'hello745\n'
+
 RUNNER_ID="$(gh_runner_id "${RUNNER_NAME}")"
 REGISTRATION_URL="$(gh_url "${RUNNER_CONTEXT:-${GITHUB_REPOSITORY}}")"
 TEMP_TOKEN="$(gh_token "${REGISTRATION_URL}")"
