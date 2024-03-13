@@ -81,8 +81,10 @@ esac
 
 RUNNER_ID="$(gh_runner_id "${RUNNER_NAME}")"
 REGISTRATION_URL="$(gh_url "${RUNNER_CONTEXT:-${GITHUB_REPOSITORY}}")"
-
 TEMP_TOKEN="$(gh_token "${REGISTRATION_URL}")"
+
+printf "runner_id ${RUNNER_ID} -- registration_url ${REGISTRATION_URL} -- temp_token ${TEMP_TOKEN}\n"
+
 retry=0
 while test -z "${TEMP_TOKEN}"; do
 	timer="$((1 << retry))"
