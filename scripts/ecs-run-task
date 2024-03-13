@@ -22,7 +22,7 @@ TASK_DEFINITION="${INPUT_TASK_DEFINITION:=${RUNNER_NAME}}"
 CLUSTER="${INPUT_CLUSTER:-default}"
 LAUNCH_TYPE="${INPUT_LAUNCH_TYPE}"
 TAGS="key=Name,value=${INPUT_NAME}"
-NETWORK_CONFIG="awsvpcConfiguration={subnets=${INPUT_SUBNETS},securityGroups=${INPUT_SECURITY_GROUPS},assignPublicIp=DISABLED}"
+NETWORK_CONFIG="awsvpcConfiguration={subnets=${INPUT_SUBNETS},securityGroups=${INPUT_SECURITY_GROUPS},assignPublicIp=ENABLED}"
 OVERRIDES="$(printf '{"containerOverrides": [{"name":"%s","environment": [%s]}]}' "${RUNNER_NAME}" "$(gen_env RUNNER_CONTEXT RUNNER_NAME RUNNER_LABELS RUNNER_WORKDIR GITHUB_TOKEN)")"
 
 : RUNNER_NAME="${RUNNER_NAME}"
