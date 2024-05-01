@@ -2,7 +2,7 @@
 set -e
 
 case "${1}" in
-(latest) VERSION="$(curl -s 'https://api.github.com/repos/actions/runner/releases/latest' | jq -r .tag_name | tr -d 'v')}";;
+(latest) VERSION="$(curl -s 'https://api.github.com/repos/actions/runner/releases/latest' | jq -r .tag_name | tr -d 'v')";;
 (*)	 VERSION="${1}";;
 esac
 
