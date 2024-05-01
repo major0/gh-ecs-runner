@@ -28,11 +28,11 @@ RUN set -e \
 WORKDIR /home/runner
 
 COPY install-gh-runner.sh .
-RUN set -e \
-        && sh install-gh-runner.sh "${VERSION}" \
-        && rm install-gh-runner.sh \
-        && rm -rf /var/lib/apt/lists/*
-
+#RUN set -e \
+#        && sh install-gh-runner.sh "${VERSION}" \
+#        && rm install-gh-runner.sh \
+#        && rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists/*
 
 COPY entrypoint.sh entrypoint.sh
 USER runner

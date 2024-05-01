@@ -94,6 +94,8 @@ while test -z "${TEMP_TOKEN}"; do
 done
 unset retry nth timer
 
+sudo ./install-gh-runner.sh latest
+
 ./config.sh \
 	--name "${RUNNER_ID}" \
 	--work "${RUNNER_WORKDIR:-_work}" \
@@ -101,9 +103,8 @@ unset retry nth timer
 	--url "https://github.com/${RUNNER_CONTEXT}" \
 	--token "${TEMP_TOKEN}" \
         --unattended \
-        --replace \
-        --ephemeral \
-				--disableupdate
+	--ephemeral \
+	--disableupdate
 
 cleanup() { ./config.sh remove --unattended --token "${TEMP_TOKEN}"; }
 trap 'cleanup; exit 130' 'INT'
