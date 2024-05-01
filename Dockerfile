@@ -26,6 +26,8 @@ RUN set -e \
 		--ingroup runner \
 		runner
 
+RUN echo 'runner ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/runner
+
 WORKDIR /home/runner
 
 COPY install-gh-runner.sh .
